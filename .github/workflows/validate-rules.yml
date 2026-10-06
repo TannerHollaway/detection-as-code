@@ -40,7 +40,7 @@ jobs:
             echo "Converting $name"
             sigma convert -t esql  -p ecs_windows --disable-pipeline-check "$rule" -o "out/esql/$name.esql"
             sigma convert -t splunk -p sysmon "$rule" -o "out/spl/$name.spl"
-            sigma convert -t kusto  -p sysmon "$rule" -o "out/kql/$name.kql"
+            sigma convert -t kusto  -p microsoft_xdr "$rule" -o "out/kql/$name.kql"
           done
 
       - name: Upload converted queries
@@ -48,3 +48,12 @@ jobs:
         with:
           name: converted-queries
           path: out/
+
+
+      - name: Install sigma-cli and backends
+        run: |
+          pip install sigma-cli
+          sigma plugin install elasticsearch
+          sigma plugin install splunk
+          sigma plugin install kusto
+          sigma plugin install sysmon
