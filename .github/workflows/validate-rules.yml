@@ -1,0 +1,50 @@
+name: Validate and Convert Sigma Rules
+
+on:
+  push:
+    paths:
+      - 'rules/**'
+      - '.github/workflows/validate-rules.yml'
+  pull_request:
+    paths:
+      - 'rules/**'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install sigma-cli and backends
+        run: |
+          pip install sigma-cli
+          sigma plugin install elasticsearch
+          sigma plugin install splunk
+          sigma plugin install kusto
+
+      - name: Validate all rules
+        run: sigma check rules/
+
+      - name: Convert to ES|QL, SPL, and KQL
+        run: |
+          mkdir -p out/esql out/spl out/kql
+          for rule in rules/*.yml; do
+            name=$(basename "$rule" .yml)
+            echo "Converting $name"
+            sigma convert -t esql  -p ecs_windows --disable-pipeline-check "$rule" -o "out/esql/$name.esql"
+            sigma convert -t splunk -p sysmon "$rule" -o "out/spl/$name.spl"
+            sigma convert -t kusto  -p sysmon "$rule" -o "out/kql/$name.kql"
+          done
+
+      - name: Upload converted queries
+        uses: actions/upload-artifact@v4
+        with:
+          name: converted-queries
+          path: out/

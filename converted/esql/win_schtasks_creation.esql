@@ -1,0 +1,1 @@
+from * metadata _id, _index, _version | where ends_with(process.executable.caseless, "\\schtasks.exe") and process.command_line like "*/create*"
