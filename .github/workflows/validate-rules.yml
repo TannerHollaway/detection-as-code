@@ -3,11 +3,11 @@ name: Validate and Convert Sigma Rules
 on:
   push:
     paths:
-      - 'rules/**'
-      - '.github/workflows/validate-rules.yml'
+      - ''rules/**''
+      - ''.github/workflows/validate-rules.yml''
   pull_request:
     paths:
-      - 'rules/**'
+      - ''rules/**''
   workflow_dispatch:
 
 jobs:
@@ -20,7 +20,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ''3.12''
 
       - name: Install sigma-cli and backends
         run: |
@@ -28,6 +28,7 @@ jobs:
           sigma plugin install elasticsearch
           sigma plugin install splunk
           sigma plugin install kusto
+          sigma plugin install sysmon
 
       - name: Validate all rules
         run: sigma check rules/
@@ -48,12 +49,3 @@ jobs:
         with:
           name: converted-queries
           path: out/
-
-
-      - name: Install sigma-cli and backends
-        run: |
-          pip install sigma-cli
-          sigma plugin install elasticsearch
-          sigma plugin install splunk
-          sigma plugin install kusto
-          sigma plugin install sysmon
