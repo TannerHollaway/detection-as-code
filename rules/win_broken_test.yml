@@ -1,0 +1,10 @@
+title: Intentionally Broken Rule
+id: deadbeef-0000-0000-0000-000000000000
+status: experimental
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        Image|endswith: '\test.exe'
+    condition: nonexistent_selection
