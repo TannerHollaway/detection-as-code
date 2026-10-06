@@ -3,11 +3,11 @@ name: Validate and Convert Sigma Rules
 on:
   push:
     paths:
-      - ''rules/**''
-      - ''.github/workflows/validate-rules.yml''
+      - 'rules/**'
+      - '.github/workflows/validate-rules.yml'
   pull_request:
     paths:
-      - ''rules/**''
+      - 'rules/**'
   workflow_dispatch:
 
 jobs:
@@ -20,7 +20,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ''3.12''
+          python-version: '3.12'
 
       - name: Install sigma-cli and backends
         run: |
