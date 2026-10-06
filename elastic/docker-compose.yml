@@ -1,0 +1,43 @@
+services:
+  setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    depends_on: [es01]
+    restart: "no"
+    command: >
+      bash -c '
+      until curl -s -u "elastic:${ELASTIC_PASSWORD}" http://es01:9200 | grep -q "cluster_name"; do echo waiting; sleep 5; done;
+      curl -s -X POST -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json"
+      http://es01:9200/_security/user/kibana_system/_password
+      -d "{\"password\":\"${KIBANA_PASSWORD}\"}";
+      echo kibana_system password set'
+
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    environment:
+      - discovery.type=single-node
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - xpack.license.self_generated.type=basic
+      - ES_JAVA_OPTS=-Xms4g -Xmx4g
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    mem_limit: 8g
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
+    depends_on: [es01]
+    environment:
+      - ELASTICSEARCH_HOSTS=http://es01:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${ENCRYPTION_KEY}
+      - XPACK_SECURITY_ENCRYPTIONKEY=${ENCRYPTION_KEY}
+      - XPACK_REPORTING_ENCRYPTIONKEY=${ENCRYPTION_KEY}
+    ports:
+      - "5601:5601"
+
+volumes:
+  esdata:
