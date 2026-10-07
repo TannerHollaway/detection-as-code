@@ -15,7 +15,7 @@ logsource:
     category: process_creation
     product: windows
 detection:
-        selection_whoami:
+    selection_whoami:
         Image|endswith: '\whoami.exe'
         CommandLine|contains:
             - '/priv'
