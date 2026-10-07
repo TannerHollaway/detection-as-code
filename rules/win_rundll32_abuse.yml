@@ -1,0 +1,31 @@
+title: Suspicious Rundll32 Execution Patterns
+id: 7d4e2f91-8a3b-4c5d-9e6f-1a2b3c4d5e6f
+status: experimental
+description: Detects rundll32.exe used in ways associated with proxy execution of attacker code rather than normal DLL loading.
+references:
+    - https://attack.mitre.org/techniques/T1218/011/
+author: Dakota Hollaway
+date: 2026-10-07
+tags:
+    - attack.defense-evasion
+    - attack.t1218.011
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_img:
+        Image|endswith: '\rundll32.exe'
+    selection_suspicious:
+        CommandLine|contains:
+            - 'javascript:'
+            - 'mshtml'
+            - 'RunHTMLApplication'
+            - 'url.dll'
+            - 'OpenURL'
+            - 'shell32.dll,Control_RunDLL'
+    selection_empty:
+        CommandLine|endswith: 'rundll32.exe'
+    condition: selection_img and (selection_suspicious or selection_empty)
+level: high
+falsepositives:
+    - Some control panel actions use shell32.dll,Control_RunDLL; tune per environment
