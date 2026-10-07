@@ -23,6 +23,7 @@ detection:
             - 'url.dll'
             - 'OpenURL'
             - 'shell32.dll,Control_RunDLL'
+            - 'FileProtocolHandler'
     selection_empty:
         CommandLine|endswith: 'rundll32.exe'
     condition: selection_img and (selection_suspicious or selection_empty)
