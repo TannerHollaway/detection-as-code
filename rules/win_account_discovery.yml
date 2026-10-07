@@ -15,8 +15,13 @@ logsource:
     category: process_creation
     product: windows
 detection:
-    selection_whoami:
+        selection_whoami:
         Image|endswith: '\whoami.exe'
+        CommandLine|contains:
+            - '/priv'
+            - '/all'
+            - '/groups'
+            - '/user'
     selection_net:
         Image|endswith:
             - '\net.exe'
