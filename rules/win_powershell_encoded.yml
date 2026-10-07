@@ -1,0 +1,30 @@
+title: PowerShell Encoded Command Execution
+id: 3b2a1c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d
+status: experimental
+description: Detects powershell.exe executing a Base64-encoded command, a common obfuscation and defense-evasion technique.
+references:
+    - https://attack.mitre.org/techniques/T1059/001/
+author: Dakota Hollaway
+date: 2026-10-07
+tags:
+    - attack.execution
+    - attack.t1059.001
+    - attack.defense-evasion
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_img:
+        Image|endswith:
+            - '\powershell.exe'
+            - '\pwsh.exe'
+    selection_enc:
+        CommandLine|contains:
+            - ' -enc'
+            - ' -ec '
+            - ' -e '
+            - ' -EncodedCommand'
+    condition: selection_img and selection_enc
+falsepositives:
+    - Rare legitimate admin scripts that pass encoded commands
+level: high
