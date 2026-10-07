@@ -41,7 +41,7 @@ A rule is written **before** its attack is run, so it targets the *technique*, n
 | sigma-cli + pySigma backends | Converts Sigma → ES\|QL / SPL / KQL |
 | GitHub Actions | Validates and converts every rule on push |
 
-The Windows VM runs with **NAT disabled** during attack simulation, isolated to a host-only network so atomics can never reach anything but the lab. Every atomic is run against a VM snapshot that is rolled back afterward.
+The Windows VM runs with **NAT disabled** during attack simulation, isolated to a host-only network so atomics can never reach anything but the lab. A VM snapshot was taken before attack testing, and each atomic's cleanup was run after it fired.
 
 ---
 
@@ -51,11 +51,19 @@ Five rules spanning five MITRE ATT&CK tactics:
 
 | Rule | Technique | Tactic | What it detects |
 | --- | --- | --- | --- |
-| `win_schtasks_creation` | T1053.005 | Persistence | Scheduled task creation via `schtasks /create` |
-| `win_powershell_encoded` | T1059.001 | Execution / Defense Evasion | PowerShell encoded commands (`-enc`, `-e`, …) |
-| `win_rundll32_abuse` | T1218.011 | Defense Evasion | Rundll32 proxy execution (JavaScript, `url.dll`, …) |
-| `win_lsass_dump` | T1003.001 | Credential Access | LSASS memory dumping (comsvcs, procdump, …) |
-| `win_account_discovery` | T1087.001 / T1033 | Discovery | Local account & system enumeration |
+| [`win_schtasks_creation`](rules/win_schtasks_creation.yml) | T1053.005 | Persistence | Scheduled task creation via `schtasks /create` |
+| [`win_powershell_encoded`](rules/win_powershell_encoded.yml) | T1059.001 | Execution / Defense Evasion | PowerShell encoded commands (`-enc`, `-e`, …) |
+| [`win_rundll32_abuse`](rules/win_rundll32_abuse.yml) | T1218.011 | Defense Evasion | Rundll32 proxy execution (JavaScript, `url.dll`, …) |
+| [`win_lsass_dump`](rules/win_lsass_dump.yml) | T1003.001 | Credential Access | LSASS memory dumping (comsvcs, procdump, …) |
+| [`win_account_discovery`](rules/win_account_discovery.yml) | T1087.001 / T1033 | Discovery | Local account & system enumeration |
+
+### Rule design notes
+
+Each rule targets the behavior, not the specific tool or test command.
+
+- **Encoded PowerShell:** PowerShell accepts any unambiguous abbreviation of a parameter, so `-e`, `-ec`, and `-enc` all mean `-EncodedCommand`. Matching only the full name would miss most real use. The rule matches the abbreviations, and it covers `pwsh.exe` (PowerShell 7) as well as `powershell.exe`.
+- **Rundll32 abuse:** `rundll32.exe` runs constantly for legitimate reasons, so matching the process alone would be almost all false positives. The rule requires a known abuse pattern in the command line (`javascript:`, `mshtml,RunHTMLApplication`, `url.dll,OpenURL`, `FileProtocolHandler`) or rundll32 launched with no arguments.
+- **LSASS dumping:** dump verbs (`MiniDump`, `-ma`, `comsvcs`) only alert when the same command line also targets `lsass`. A routine procdump of some other process doesn't fire, and a renamed dumper still fires if it targets LSASS through comsvcs.
 
 ---
 
@@ -67,7 +75,7 @@ Every rule was written blind, then validated by firing its Atomic Red Team test 
 | --- | --- | --- | --- |
 | T1053.005 Scheduled Task | 1 | `win_schtasks_creation` | ✅ Caught both tasks created |
 | T1059.001 Encoded PowerShell | 17 | `win_powershell_encoded` | ✅ Caught `-e <base64>` |
-| T1218.011 Rundll32 abuse | 8 | `win_rundll32_abuse` | ✅ A control query found a missed command; rule fixed and re-tested |
+| T1218.011 Rundll32 abuse | 8 | `win_rundll32_abuse` | ✅ A control query exposed a missed `URL.dll` command (case-sensitivity, see limitations) |
 | T1003.001 LSASS dump | 2 | `win_lsass_dump` | ✅ Caught dumper + launcher |
 | T1087.001 / T1033 Discovery | 8 | `win_account_discovery` | ✅ Then tuned for false positives (below) |
 
@@ -110,8 +118,9 @@ detection:
 
 **ES|QL (Elastic)**
 ```
-from * | where ends_with(process.executable.caseless, "\\schtasks.exe")
-         and process.command_line like "*/create*"
+from * metadata _id, _index, _version
+| where ends_with(process.executable.caseless, "\\schtasks.exe")
+  and process.command_line like "*/create*"
 ```
 
 **SPL (Splunk)**
@@ -171,7 +180,10 @@ docker compose up -d          # Kibana at http://localhost:5601
 python -m venv .venv
 .venv/Scripts/Activate.ps1    # Windows
 pip install sigma-cli
-sigma plugin install elasticsearch splunk kusto sysmon
+sigma plugin install elasticsearch
+sigma plugin install splunk
+sigma plugin install kusto
+sigma plugin install sysmon
 
 # 3. Convert a rule locally
 sigma convert -t esql -p ecs_windows --disable-pipeline-check rules/win_schtasks_creation.yml
@@ -186,4 +198,5 @@ git add rules/ && git commit -m "add rule" && git push
 
 - **Lab-only security tradeoffs:** Elasticsearch runs over HTTP and Fleet Server uses a self-signed certificate. Production would use CA-signed TLS throughout.
 - **Command-line vs. handle-based detection:** `win_lsass_dump` matches dumper command lines (Sysmon Event ID 1). A stronger version would detect LSASS handle access (Event ID 10), which this Sysmon config does not currently log.
-- **No live deployment yet:** validated rules are converted but not auto-loaded into Elastic as live detection rules, so the Sigma source and the running SIEM query can drift. Closing that gap — a deploy step that pushes validated rules to Elastic's detection-rule API.
+- **No live deployment yet:** validated rules are converted but not auto-loaded into Elastic as live detection rules, so the Sigma source and the running SIEM query can drift. Closing that gap with a deploy step that pushes validated rules to Elastic's detection-rule API is the planned next phase.
+- **Case-sensitive command-line matching in the ES|QL output:** Sigma's `contains` is case-insensitive, but the converted ES|QL uses `like` on `process.command_line`, which is case-sensitive. Observed during rundll32 validation: `*url.dll*` did not match `URL.dll,FileProtocolHandler`. Only `process.executable` gets a `.caseless` comparison. In Elastic, a command typed as `/Create` or `-ENC` could slip past these rules. Fix candidate: normalize the command line (for example `TO_LOWER`) in the pipeline before matching.
