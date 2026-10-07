@@ -186,4 +186,4 @@ git add rules/ && git commit -m "add rule" && git push
 
 - **Lab-only security tradeoffs:** Elasticsearch runs over HTTP and Fleet Server uses a self-signed certificate. Production would use CA-signed TLS throughout.
 - **Command-line vs. handle-based detection:** `win_lsass_dump` matches dumper command lines (Sysmon Event ID 1). A stronger version would detect LSASS handle access (Event ID 10), which this Sysmon config does not currently log.
-- **No live deployment yet:** validated rules are converted but not auto-loaded into Elastic as live detection rules, so the Sigma source and the running SIEM query can drift. Closing that gap — a deploy step that pushes validated rules to Elastic's detection-rule API — is the planned next phase.
+- **No live deployment yet:** validated rules are converted but not auto-loaded into Elastic as live detection rules, so the Sigma source and the running SIEM query can drift. Closing that gap — a deploy step that pushes validated rules to Elastic's detection-rule API.
