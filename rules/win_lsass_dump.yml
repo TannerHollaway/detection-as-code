@@ -1,0 +1,32 @@
+title: LSASS Memory Dump via Known Tooling
+id: 9c8b7a6d-5e4f-4a3b-2c1d-0f9e8d7c6b5a
+status: experimental
+description: Detects command-line patterns associated with dumping LSASS process memory to steal credentials.
+references:
+    - https://attack.mitre.org/techniques/T1003/001/
+author: Dakota Hollaway
+date: 2026-10-07
+tags:
+    - attack.credential-access
+    - attack.t1003.001
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_lsass_in_cmdline:
+        CommandLine|contains: 'lsass'
+    selection_dump_verbs:
+        CommandLine|contains:
+            - 'MiniDump'
+            - '-ma '
+            - 'comsvcs'
+            - 'dumpert'
+            - 'nanodump'
+    selection_procdump:
+        CommandLine|contains|all:
+            - 'procdump'
+            - 'lsass'
+    condition: (selection_lsass_in_cmdline and selection_dump_verbs) or selection_procdump
+falsepositives:
+    - Legitimate crash-dump collection by administrators or support tools
+level: high
