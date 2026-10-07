@@ -1,0 +1,32 @@
+title: Local Account and System Discovery Commands
+id: 2f1e0d9c-8b7a-4c6d-5e4f-3a2b1c0d9e8f
+status: experimental
+description: Detects built-in commands commonly used to enumerate local accounts, groups, and the current user during post-compromise discovery.
+references:
+    - https://attack.mitre.org/techniques/T1087/001/
+    - https://attack.mitre.org/techniques/T1033/
+author: Dakota Hollaway
+date: 2026-10-07
+tags:
+    - attack.discovery
+    - attack.t1087.001
+    - attack.t1033
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_whoami:
+        Image|endswith: '\whoami.exe'
+    selection_net:
+        Image|endswith:
+            - '\net.exe'
+            - '\net1.exe'
+        CommandLine|contains:
+            - 'user'
+            - 'localgroup'
+            - 'group'
+    condition: selection_whoami or selection_net
+falsepositives:
+    - Administrators and logon scripts routinely run whoami and net user
+    - Software that enumerates group membership during install
+level: low
